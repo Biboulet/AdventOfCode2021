@@ -1,6 +1,6 @@
 import os
 import utils
-
+import unittest
 scans = utils.read_file(os.getcwd() + "\\input.txt")
 
 
@@ -25,6 +25,8 @@ def part2():
             increased += 1
         previous_value = sum_of_numbers
     print(increased)
+
+
 
 
 if __name__ == "__main__":

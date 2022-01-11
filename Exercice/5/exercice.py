@@ -1,5 +1,6 @@
 import os
 import utils
+import math
 from utils import Vector2
 
 scans = utils.read_file(os.getcwd() + "\\input.txt")
@@ -7,40 +8,69 @@ scans = utils.read_file(os.getcwd() + "\\input.txt")
 
 class Line:
     def __init__(self, _a, _b):
-        self.max = _a
-        self.min = _b
+        self.a = _a
+        self.b = _b
 
-        if self.min.x == self.max.x:
-            if _a.y > _b.y:
-                self.max = _a
-                self.min = _b
-            else:
-                self.max = _b
-                self.min = _a
+        self.cases = self.get_cases()
+
+    def get_cases(self):
+        cases = []
+        # vertical
+        if self.a.x == self.b.x:
+            min, max = self.get_min_and_max(self.a, self.b)
+
+            for i in range(min.y, max.y + 1):
+                cases.append(Vector2(self.a.x, i))
+
+        # horizontal
+        elif self.a.y == self.b.y:
+            min, max = self.get_min_and_max(self.a, self.b)
+
+            for i in range(min.x, max.x + 1):
+                cases.append(Vector2(i, self.a.y))
+        # diagonal
+        #gauche haut vers bas droite (+ en + de x et y)
+        elif (self.a.x < self.b.x and self.a.y < self.b.y) or (self.a.x > self.b.x and self.a.y > self.b.y):
+            min, max = self.get_min_and_max(self.a, self.b)
+
+            for i in range(1 + max.x - min.x):
+               cases.append(Vector2(min.x + i, min.y + i))
+
         else:
-            if _a.x > _b.x:
-                self.max = _a
-                self.min = _b
+            min, max = self.get_min_and_max(self.a, self.b)
+
+            for i in range(1 + max.x - min.x):
+               cases.append(Vector2(min.x + i, min.y - i))
+
+
+        return cases
+
+    def get_min_and_max(self, a, b):
+        if a.x == b.x:
+            if a.y < b.y:
+                return a, b
             else:
-                self.max = _b
-                self.min = _a
+                return b, a
 
-    def intersect(self, otherLine):
+        if self.a.y == self.b.y:
+            if a.x < b.x:
+                return a, b
+            else:
+                return b, a
 
-        if self.is_vertical() and otherLine.is_vertical():
-            is_inter = otherLine.min.x == self.min.x and (otherLine.min.x <)
-            coord_shared =
-            return
-        if self.is_vertical() and not otherLine.is_vertical():
-            return self.min.y > otherLine.min.y > self.max.y and otherLine.min.x > self.min.x > otherLine.max.x, 1
-
-        if not self.is_vertical() and otherLine.is_vertical():
-            return self.min.x > otherLine.min.x > self.max.x and otherLine.min.y > self.min.y > otherLine.max.y, 1
+        if (self.a.x < self.b.x and self.a.y < self.b.y) or (self.a.x > self.b.x and self.a.y > self.b.y):
+            if self.a.x < self.b.x and self.a.y < self.b.y:
+                return a, b
+            else:
+                return b, a
         else:
+            if self.a.y > self.b.y:
+                return a, b
+            else:
+                return b, a
 
-
-    def is_vertical(self):
-        return self.min.x == self.max.x
+    def commun_cases(self, other):
+        return [case for case in self.cases if case in other.cases]
 
 
 def instantiate_lines(scans):
@@ -50,32 +80,32 @@ def instantiate_lines(scans):
         a = Vector2(int(args[0].split(",")[0]), int(args[0].split(",")[1]))
         b = Vector2(int(args[1].split(",")[0]), int(args[1].split(",")[1]))
 
-        if a.x != b.x and a.y != b.y:
-            continue
-        lines.append(Line(a, b))
+        lines.append(Line(a,b))
 
     return lines
 
 
 def get_num_of_intersect(lines):
-    intersect_count = 0
-    #ce qui ont déja été line 1 et qui ont interagit avec tt le monde
-    already_interact_with_all = []
+    intersections = []
+    intercated_with_all = []
 
+    i = 0
     for line1 in lines:
+        print(i)
         for line2 in lines:
 
             if line1 == line2:
                 continue
-            if line2 in already_interact_with_all:
+
+            if line2 in intercated_with_all:
                 continue
 
-            is_intersect, intersections_count = line1.intersect(line2)
-            if is_intersect:
-                intersect_count += intersections_count
+            commun_cases = line1.commun_cases(line2)
+            [intersections.append(case) for case in commun_cases if case not in intersections]
 
-    return intersect_count
-
+        intercated_with_all.append(line1)
+        i += 1
+    return len(intersections)
 
 if __name__ == "__main__":
     lines = instantiate_lines(scans)

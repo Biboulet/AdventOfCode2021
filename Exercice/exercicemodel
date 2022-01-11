@@ -5,3 +5,24 @@ scans = utils.read_file(os.getcwd() + "\\input.txt")
 
 if __name__ == "__main__":
     pass
+
+
+
+
+class Test(unittest.TestCase):
+    def test_inc(self):
+        self.assertEqual(1, is_increasing(1, 2))
+        self.assertEqual(0, is_increasing(2, 2))
+
+    def test_list(self):
+        self.assertEqual(1, count_increase([1, 2]))
+        self.assertEqual(2, count_increase([1, 2, 3]))
+
+    def test_demo(self):
+        m = [199, 200, 208, 210, 200, 207, 240, 269, 260, 263]
+        self.assertEqual(7, count_increase(m))
+
+    def test_sum(self):
+        measurements = [1, 2, 3, 4, 5]
+        triplets = [sum([1, 2, 3]), sum([2, 3, 4]), sum([3, 4, 5])]
+        self.assertEqual(triplets, to_triplets(measurements))
