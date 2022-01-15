@@ -3,38 +3,31 @@ import utils
 
 scans = utils.read_file(os.getcwd() + "\\input.txt")
 
-
-class Player:
-    def __init__(self, startingpos):
-        self.position = startingpos
-        self.score = 0
+D = {}
 
 
-def play(Player1, Player2, target_score, number_of_rolls = 0):
+def get_number_of_wins(score1, score2, pos1, pos2):
+    if score1 >= 21:
+        return (1, 0)
+    if score2 >= 21:
+        return (0, 1)
 
-    while True:
+    if (score1, score2, pos1, pos2) in D:
+        return D[(score1, score2, pos1, pos2)]
 
-        for player in [Player1, Player2]:
-
-            for dice in range(1, 4):
-                # on change la position
-                player.position += turn
-                if player.position > 10:
-                    player.position -= 10
-
-
-
-                number_of_rolls += 1
-
-            # on ajoute le score
-            player.score += player.position
-            if Player1.score >= target_score or Player2.score >= target_score:
-                return number_of_rolls * min([Player1.score, Player2.score])
-
-
+    number_of_wins = (0, 0)
+    for dice1 in [1, 2, 3]:
+        for dice2 in [1, 2, 3]:
+            for dice3 in [1, 2, 3]:
+                new_pos = (pos1 + dice1 + dice2 + dice3) % 10
+                new_score = score1 + new_pos + 1
+                x1, y1 = get_number_of_wins(score2, new_score, pos2, new_pos)
+                number_of_wins = (number_of_wins[0] + y1, number_of_wins[1] + x1)
+    D[(score1, score2, pos1, pos2)] = number_of_wins
+    return number_of_wins
 
 
 if __name__ == "__main__":
-    player_1 = Player(int(scans[0].split(": ")[1]))
-    player_2 = Player(int(scans[1].split(": ")[1]))
-    print(play(player_1, player_2, 21))
+    a = get_number_of_wins(0, 0, 5, 8)
+    print(max(a))
+    print(a)
