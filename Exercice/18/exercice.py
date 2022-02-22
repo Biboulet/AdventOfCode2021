@@ -1,108 +1,178 @@
 import os
 import utils
-
+import re
+import itertools
 scans = utils.read_file(os.getcwd() + "\\input.txt")
 
 
-class Pair:
-    def __init__(self, input, a=None, b=None):
+def add(base_number, number):
+    return "[" + base_number + "," + number + "]"
 
-        if input is None:
-            self.a = a
-            self.b = b
-            return
 
-        a = ""
-        b = ""
-        is_part_a = True
-        parenthese_count = 0
-        for char in input[1:-1]:
-            # on change
-            if char == "," and parenthese_count == 0:
-                is_part_a = False
-                continue
+# return the index of the first and last char of the deepest pair
+def get_deepest_pair(string):
+    depth = 0
+    deepest = 0
+    pair_start = None
+    for i, char in enumerate(string):
+        if char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
 
-            # on remplit les 2 partie
-            if is_part_a:
-                a += char
-            else:
-                b += char
+        if depth > 4:
+            if deepest < depth:
+                deepest = depth
+                pair_start = i
 
-            if char == "[":
-                parenthese_count += 1
-            elif char == "]":
-                parenthese_count -= 1
+    return pair_start, string.find("]", pair_start)
 
-        if len(a) == 1:
-            self.a = int(a)
+
+# return the index of the first digit in the number which has more than 2 digit
+def get_closest_splitable(string):
+    splitable = re.search(r'\d\d', string)
+    if splitable is not None:
+        return splitable.start()
+    return None
+
+
+#tuple avec le début et la fin
+def find_right_index(base_number, index):
+    start_index = None
+    end_index = None
+
+    for i, char in enumerate(base_number[index:]):
+        if char.isdigit():
+            start_index = i +index
+            end_index = re.search(r"\D", base_number[i+index:]).start() + index + i
+            break
+
+    return start_index, end_index
+
+def remplace_rightmost(base_number, end_index, b):
+    right_index = find_right_index(base_number, end_index)
+    if right_index[0] is None:
+        return base_number
+    num = b + int(base_number[right_index[0]:right_index[1]])
+    return base_number[:right_index[0]] + str(num) + base_number[right_index[1]:]
+
+
+
+def find_left_index(base_number, index):
+    start_index = end_index = None
+    i = index - 1
+    while i > 0:
+        char = base_number[i]
+        if char.isdigit():
+
+            if start_index is not None:
+                start_index = i
+                return start_index, end_index+1
+            start_index = end_index = i
         else:
-            self.a = Pair(a)
+            if start_index is not None:
+                return start_index, end_index+1
 
-        if len(b) == 1:
-            self.b = int(b)
+        i-=1
+    return None, None
+
+
+def remplace_leftmost(base_number, start_index, a):
+    left_index = find_left_index(base_number, start_index)
+    if left_index[0] is None:
+        return base_number
+    num = a + int(base_number[left_index[0]:left_index[1]])
+    return base_number[:left_index[0]] + str(num) + base_number[left_index[1]:]
+
+
+def remove_deepest_pair(base_number, deepest_pair_index):
+    return base_number[:deepest_pair_index[0]] + "0" + base_number[deepest_pair_index[1]+1:]
+
+
+def get_as_splited(param):
+    if param % 2 == 0:
+        return "[" + str(param // 2) + "," + str(param // 2) + "]"
+    else:
+        return "[" + str(param // 2) + "," + str((param // 2) + 1) + "]"
+
+
+# TODO:ne gère pas les nombres a 3 chiffres
+def reduce(base_number):
+    deepest_pair_index = get_deepest_pair(base_number)
+    closest_splitable_index = get_closest_splitable(base_number)
+
+    while deepest_pair_index[0] is not None or closest_splitable_index is not None:
+
+        # exploding
+        if deepest_pair_index[0] is not None:
+
+            pair = base_number[deepest_pair_index[0]:deepest_pair_index[1]+1]
+            args = pair.split(",")
+
+            a = int(args[0][1:])
+            b = int(args[1][:-1])
+
+            base_number = remplace_rightmost(base_number, deepest_pair_index[1], b)
+            base_number = remove_deepest_pair(base_number, deepest_pair_index)
+            base_number = remplace_leftmost(base_number, deepest_pair_index[0], a)
         else:
-            self.b = Pair(b)
 
-    def magnitude(self):
-        return 3*self.get_value(self.a) + 2*self.get_value(self.b)
+            num = int(base_number[closest_splitable_index:closest_splitable_index + 2])
+            base_number = base_number[:closest_splitable_index] + get_as_splited(num) + base_number[
+                                                                                        closest_splitable_index + 2:]
 
-    def __add__(self, other):
-        return Pair(None, self, other)
+        closest_splitable_index = get_closest_splitable(base_number)
+        deepest_pair_index = get_deepest_pair(base_number)
 
-    #la fonction doit etre appeler de gauche a droite
-    #previousNumber (le nombre de gauche)
-    #valueToAdd (on est le nombre de droite du nombre précédent)
-    def reduce(self, depth=0, previousPair=None, valueToAdd=None):
-        if valueToAdd is None:
-            valueToAdd = [0]
-
-        if isinstance(self.a, int):
-            self.a += valueToAdd[0]
-
-        #explosion
-        if depth == 4:
-            if previousPair is not None:
-                previousPair.b += self.a
-            valueToAdd[0] = self.b
-            del self
-
-        for child in [self.a, self.b]:
-            if isinstance(child, int) and child > 9:
-                if child % 2==0:
-                    child = Pair("["+str(child/2)+"," + str(child/2)+"]")
-                else:
-                    child = Pair("[" + str(child // 2) + "," + str((child // 2)+1) + "]")
-                return
-            if not isinstance(child, int):
-                child.reduce(depth+1, )
+    return base_number
 
 
-    def get_value(self, param):
-        if param == None:
-            return 0
-        if isinstance(param, int):
-            return param
+def add_numbers(scans):
+    base_number = scans[0]
+    for number in scans[1:]:
+        base_number = add(base_number, number)
+        base_number = reduce(base_number)
+
+    return base_number
+
+
+def magnetude(num):
+    if len(num) == 1:
+        return int(num)
+    if len(num) == 5:
+        return int(num[1]) * 3 + int(num[3]) * 2
+
+    a = ""
+    b = ""
+    depth = 0
+    is_first_part = True
+    for char in num[1:-1]:
+        if depth == 0 and char == ",":
+            is_first_part = False
+            continue
+
+        if is_first_part:
+            a += char
         else:
-            return param.magnitude()
+            b += char
+
+        if char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
+
+    return 3 * magnetude(a) + 2 * magnetude(b)
 
 
-def instantiate_numbers(scans):
-    numbers = []
-    for line in scans:
-        numbers.append(Pair(line))
-
-    return numbers
-
-
-def add_numbers(numbers):
-    total = numbers[0]
-    for num in numbers[1:]:
-        total+=num
-        total.reduce()
-    return total
-
+def find_best_combinations(scans):
+    combinations = itertools.permutations(scans,2)
+    largest_magnetude = 0
+    for combination in combinations:
+        sum = add_numbers(combination)
+        current_magnetude = magnetude(sum)
+        if current_magnetude > largest_magnetude:
+            largest_magnetude = current_magnetude
+    return largest_magnetude
 
 if __name__ == "__main__":
-    numbers = instantiate_numbers(scans)
-    result = add_numbers(numbers)
-    print(result.magnitude())
+    print(find_best_combinations(scans))
