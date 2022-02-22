@@ -5,34 +5,14 @@ import math
 scans = utils.read_file(os.getcwd() + "\\input.txt")
 
 
-def remove_duplicates(list):
-    final_list = []
-    for thing in list:
-        if thing not in final_list:
-            final_list.append(thing)
-    return final_list
-
-
 class OctreeNode:
-    def __init__(self, _min, _max, activated=False):
+    def __init__(self, _min, _max, parent=None):
         self.min = _min
         self.max = _max
-        self._activated = activated
+        self.activated = False
 
+        self.parent = parent
         self.children = []
-
-    @property
-    def activated(self):
-        return self._activated
-
-    @activated.setter
-    def activated(self, value):
-        self._activated = value
-        for child in self.children:
-            child.activated = value
-
-    def __eq__(self, other):
-        return self.min == other.min and self.max == other.max
 
     def get_corners_inter_other(self, other):
         corner_in_other = sum([1 for corner in get_corners(self) if contains(other, corner)])
@@ -40,15 +20,17 @@ class OctreeNode:
         return corner_in_other, corner_in_self
 
     def insert(self, other):
+        if self.min == Vector3(12,10,12) and self.max == Vector3(12,11,12):
+            print("ha")
         # les 2
         corners_in_other, corners_in_self = self.get_corners_inter_other(other)
 
-        # si on est dans le cube
+        #si on est dans le cube
         if corners_in_other == 8:
             self.activated = other.activated
             return
 
-        # si le cube n'est ni en nous et que nous ne somme pas dans le cube, on skip
+        #si le cube n'est ni en nous et que nous ne somme pas dans le cube, on skip
         if corners_in_self == 0 and corners_in_other == 0:
             return
 
@@ -60,45 +42,36 @@ class OctreeNode:
 
     def subdivide(self):
         # centre = (self.min + self.max)//2
-        # TODO:split bizzare quand minx =maxx
-        assert self.volume() > 1
-
         centre = Vector3((self.min.x + self.max.x) // 2, (self.min.y + self.max.y) // 2, (self.min.z + self.max.z) // 2)
-
-        second_half_x = centre.x + 1 if self.min.x != self.max.x else centre.x
-        second_half_y = centre.y + 1 if self.min.y != self.max.y else centre.y
-        second_half_z = centre.z + 1 if self.min.z != self.max.z else centre.z
-
         min = self.min
         max = self.max
 
         # min ; centre
-        bas_gauche_back = OctreeNode(Vector3(min.x, min.y, min.z), Vector3(centre.x, centre.y, centre.z), self.activated)
+        bas_gauche_back = OctreeNode(Vector3(min.x, min.y, min.z), Vector3(centre.x, centre.y, centre.z))
 
         # (centre.x+1,min.y,min.z) ; (max.x, centre.y, centre.z)
-        bas_droite_back = OctreeNode(Vector3(second_half_x, min.y, min.z), Vector3(max.x, centre.y, centre.z), self.activated)
+        bas_droite_back = OctreeNode(Vector3(centre.x + 1, min.y, min.z), Vector3(max.x, centre.y, centre.z))
 
         # (min.x, centre.y+1, min.z) ; (centre.x, max.y, centre.z)
-        haut_gauche_back = OctreeNode(Vector3(min.x, second_half_y, min.z), Vector3(centre.x, max.y, centre.z), self.activated)
+        haut_gauche_back = OctreeNode(Vector3(min.x, centre.y + 1, min.z), Vector3(centre.x, max.y, centre.z))
 
         # (centre.x+1, centre.y+1, min.z) ; (max.x, max.y, centre.z)
-        haut_droite_back = OctreeNode(Vector3(second_half_x, second_half_y, min.z), Vector3(max.x, max.y, centre.z), self.activated)
+        haut_droite_back = OctreeNode(Vector3(centre.x + 1, centre.y + 1, min.z), Vector3(max.x, max.y, centre.z))
 
         # min ; centre
-        bas_gauche_front = OctreeNode(Vector3(min.x, min.y, second_half_z), Vector3(centre.x, centre.y, max.z), self.activated)
+        bas_gauche_front = OctreeNode(Vector3(min.x, min.y, centre.z + 1), Vector3(centre.x, centre.y, max.z))
 
         # (centre.x+1,min.y,centre.z+1) ; (max.x, centre.y, centre.z)
-        bas_droite_front = OctreeNode(Vector3(second_half_x, min.y, second_half_z), Vector3(max.x, centre.y, max.z), self.activated)
+        bas_droite_front = OctreeNode(Vector3(centre.x + 1, min.y, centre.z + 1), Vector3(max.x, centre.y, max.z))
 
         # (min.x, centre.y+1, centre.z+1) ; (centre.x, max.y, centre.z)
-        haut_gauche_front = OctreeNode(Vector3(min.x, second_half_y, second_half_z), Vector3(centre.x, max.y, max.z), self.activated)
+        haut_gauche_front = OctreeNode(Vector3(min.x, centre.y + 1, centre.z + 1), Vector3(centre.x, max.y, max.z))
 
         # (centre.x+1, centre.y+1, centre.z+1) ; (max.x, max.y, centre.z)
-        haut_droite_front = OctreeNode(Vector3(second_half_x, second_half_y, second_half_z),
-                                       Vector3(max.x, max.y, max.z), self.activated)
+        haut_droite_front = OctreeNode(Vector3(centre.x + 1, centre.y + 1, centre.z + 1), Vector3(max.x, max.y, max.z))
 
-        return remove_duplicates([bas_gauche_back, bas_droite_back, haut_gauche_back, haut_droite_back, bas_gauche_front,
-                 bas_droite_front, haut_gauche_front, haut_droite_front])
+        return [bas_gauche_back, bas_droite_back, haut_gauche_back, haut_droite_back, bas_gauche_front,
+                bas_droite_front, haut_gauche_front, haut_droite_front]
 
     def get_activated(self):
         if len(self.children):
@@ -109,11 +82,10 @@ class OctreeNode:
         return 0
 
     def volume(self):
-        return (self.max.x + 1 - self.min.x) * (self.max.y + 1 - self.min.y) * (self.max.z + 1 - self.min.z)
+        return (self.max.x+1 - self.min.x) * (self.max.y+1 - self.min.y) * (self.max.z+1 - self.min.z)
 
     def __str__(self):
-        return str(self.min) + " ; " + str(self.max) + (" ; has children" if len(self.children) != 0 else "") + (
-            " ; activated" if self.activated else "")
+        return str(self.min) + " ; " + str(self.max) + (" ; has children" if len(self.children) != 0 else "") + (" ; activated" if self.activated else "")
 
 
 class Vector3:
@@ -172,7 +144,7 @@ def get_cubes(scans):
 
 
 def compute_octree(main_octree, cubes):
-    for i, cube in enumerate(cubes):
+    for i,cube in enumerate(cubes):
         print(i)
         main_octree.insert(cube)
 
