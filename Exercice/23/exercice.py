@@ -83,9 +83,8 @@ class Test(unittest.TestCase):
   #A#B#C#D#
   #B#A#D#C#
   #########""".splitlines()
-        self.assertNotEqual(hash(parse_board(t1)), hash(parse_board(t2)))
-        self.assertNotEqual(parse_board(t1), parse_board(t2))
-        c = {parse_board(t1), parse_board(t2)}
+        c = [parse_board(t1), parse_board(t2)]
+        good_append(parse_board(t1),c)
         self.assertEqual(len(c), 2)
 
     def test_dijkstra(self):
@@ -260,14 +259,24 @@ def get_lowest_board(boards):
     return smallest
 
 
+def good_append(board, board_list):
+    if board in board_list:
+        index = board_list.index(board)
+        if board.energy < board_list[index].energy:
+            del board_list[index]
+            board_list.append(board)
+    else:
+        board_list.append(board)
+
+
 def solve_board(base_board):
     current_board = base_board
-    boards = {base_board}
+    boards = [base_board]
     while not current_board.is_end():
         current_board = get_lowest_board(boards)
         boards.remove(current_board)
         c = current_board.all_next_moves()
-        [boards.add(board) for board in c]
+        [good_append(board, boards) for board in c]
 
     return current_board.energy
 
